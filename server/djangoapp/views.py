@@ -1,14 +1,11 @@
 import logging
 import json
-from datetime import datetime
 from django.http import JsonResponse
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import CarMake, CarModel
-from .populate import initiate
-from .restapis import get_request, analyze_review_sentiments, post_review
+from .restapis import get_request, analyze_review_sentiments
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -23,7 +20,10 @@ def login_user(request):
     user = authenticate(username=username, password=password)
     if user is not None:
         login(request, user)
-        return JsonResponse({"userName": username, "status": "Authenticated"})
+        return JsonResponse({
+            "userName": username,
+            "status": "Authenticated"
+        })
     return JsonResponse({"userName": username})
 
 
@@ -45,7 +45,10 @@ def registration(request):
 
     try:
         User.objects.get(username=username)
-        return JsonResponse({"userName": username, "error": "Already Registered"})
+        return JsonResponse({
+            "userName": username,
+            "error": "Already Registered"
+        })
     except User.DoesNotExist:
         logger.debug(f"{username} is new user")
         user = User.objects.create_user(
@@ -56,7 +59,10 @@ def registration(request):
             email=email
         )
         login(request, user)
-        return JsonResponse({"userName": username, "status": "Authenticated"})
+        return JsonResponse({
+            "userName": username,
+            "status": "Authenticated"
+        })
 
 
 # Update the `get_dealerships` view to render the list of dealerships
@@ -72,4 +78,6 @@ def get_dealer_reviews(request, dealer_id):
         endpoint = f"/fetchReviews/dealer/{dealer_id}"
         reviews = get_request(endpoint)
         for review_detail in reviews:
-            sentiment = analyze_review_sentiments
+            analyze_review_sentiments(review_detail.get("review", ""))
+        return JsonResponse({"dealer_id": dealer_id, "reviews": reviews})
+    return JsonResponse({"error": "Dealer ID not provided"}, status=400)
